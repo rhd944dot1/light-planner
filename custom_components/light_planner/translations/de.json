@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Light Planner",
+        "description": "Fügt Light Planner zur Seitenleiste hinzu, dort legst du deine Flows an."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Light Planner ist bereits eingerichtet."
+    }
+  }
+}
