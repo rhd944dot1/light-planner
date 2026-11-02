@@ -389,7 +389,6 @@ select, input[type=text], input[type=time], input[type=number] { width: 100%; mi
   border: 1px solid var(--divider-color); background: var(--secondary-background-color); }
 input[type=range] { width: 100%; accent-color: var(--primary-color); }
 input[type=checkbox] { accent-color: var(--primary-color); width: 18px; height: 18px; margin: 0; }
-input[type=color] { width: 56px; height: 36px; padding: 2px; border: 1px solid var(--divider-color); border-radius: 8px; background: none; }
 label.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); min-width: 0; }
 label.check { display: inline-flex; align-items: center; gap: 8px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
@@ -473,6 +472,10 @@ details.legend summary { cursor: pointer; color: var(--secondary-text-color); fo
 .modes button { font-size: 12px; padding: 4px 10px; }
 .modes button[aria-pressed=true] { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
 .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.wheel { position: relative; width: min(100%, 240px); aspect-ratio: 1; border-radius: 50%; cursor: crosshair; touch-action: none;
+  background: radial-gradient(closest-side, #fff, transparent), conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.wheel:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.wheel i { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; box-sizing: border-box; border: 3px solid #fff; border-radius: 50%; pointer-events: none; box-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
 .swatches button { width: 28px; height: 28px; min-height: 0; padding: 0; border-radius: 50%; }
 .summary { font-size: 14px; line-height: 1.6; margin: 0; }
 .summary ul { margin: 4px 0; padding-left: 18px; }
@@ -525,12 +528,23 @@ function h(tag, props = {}, ...children) {
   return element;
 }
 
-function hexToRgb(hex) {
-  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+function hsToRgb(hue, saturation) {
+  const channel = (n) => {
+    const k = (n + hue / 60) % 6;
+    return Math.round(255 * (1 - saturation * Math.max(0, Math.min(k, 4 - k, 1))));
+  };
+  return [channel(5), channel(3), channel(1)];
 }
 
-function rgbToHex(rgb) {
-  return "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
+function rgbToHs([r, g, b]) {
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  if (!delta) return [0, 0];
+  let hue;
+  if (max === r) hue = (g - b) / delta;
+  else if (max === g) hue = (b - r) / delta + 2;
+  else hue = (r - g) / delta + 4;
+  return [mod(hue * 60, 360), delta / max];
 }
 
 function kelvinToRgb(kelvin) {
@@ -2228,42 +2242,33 @@ class LightPlannerPanel extends HTMLElement {
       }
       if (look.mode === "white") {
         const value = h("span", {}, `${look.kelvin} K`);
-        children.push(
-          h(
-            "label",
-            { class: "fld" },
-            h("span", {}, `${this._t("temperature")} `, value),
-            h("input", {
-              type: "range",
-              min: 2000,
-              max: 6500,
-              step: 50,
-              value: Math.min(6500, Math.max(2000, look.kelvin)),
-              oninput: (e) => {
-                look.kelvin = Number(e.target.value);
-                value.textContent = `${look.kelvin} K`;
-                this._changed();
-              },
-            })
-          )
-        );
+        const setKelvin = (kelvin) => {
+          look.kelvin = kelvin;
+          value.textContent = `${kelvin} K`;
+          this._changed();
+        };
+        const clamped = Math.min(6500, Math.max(2000, look.kelvin));
+        let slider;
+        if (customElements.get("ha-selector")) {
+          slider = document.createElement("ha-selector");
+          slider.hass = this._hass;
+          slider.selector = { color_temp: { unit: "kelvin", min: 2000, max: 6500 } };
+          slider.value = clamped;
+          slider.addEventListener("value-changed", (e) => setKelvin(Number(e.detail.value)));
+        } else {
+          slider = h("input", {
+            type: "range",
+            min: 2000,
+            max: 6500,
+            step: 50,
+            value: clamped,
+            oninput: (e) => setKelvin(Number(e.target.value)),
+          });
+        }
+        children.push(h("div", { class: "fld" }, h("span", {}, `${this._t("temperature")} `, value), slider));
       }
       if (look.mode === "color") {
-        children.push(
-          h(
-            "label",
-            { class: "fld" },
-            this._t("color"),
-            h("input", {
-              type: "color",
-              value: rgbToHex(look.rgb),
-              oninput: (e) => {
-                look.rgb = hexToRgb(e.target.value);
-                this._changed();
-              },
-            })
-          )
-        );
+        children.push(this._colorWheel(look));
       }
       const percent = h("span", {}, look.brightness === null ? "" : `${look.brightness}%`);
       children.push(
@@ -2307,6 +2312,55 @@ class LightPlannerPanel extends HTMLElement {
     };
     draw();
     return body;
+  }
+
+  _colorWheel(look) {
+    const dot = h("i");
+    const set = (hue, saturation) => {
+      look.rgb = hsToRgb(hue, saturation);
+      place();
+      this._changed();
+    };
+    const pick = (event) => {
+      const box = wheel.getBoundingClientRect();
+      const x = ((event.clientX - box.left) / box.width) * 2 - 1;
+      const y = ((event.clientY - box.top) / box.height) * 2 - 1;
+      set(mod((Math.atan2(y, x) * 180) / Math.PI, 360), Math.min(1, Math.hypot(x, y)));
+    };
+    const wheel = h(
+      "div",
+      {
+        class: "wheel",
+        tabindex: 0,
+        role: "slider",
+        "aria-label": this._t("color"),
+        onpointerdown: (e) => {
+          wheel.setPointerCapture(e.pointerId);
+          pick(e);
+        },
+        onpointermove: (e) => {
+          if (wheel.hasPointerCapture(e.pointerId)) pick(e);
+        },
+        onkeydown: (e) => {
+          const [hue, saturation] = rgbToHs(look.rgb);
+          const turn = { ArrowLeft: -5, ArrowRight: 5 }[e.key] ?? 0;
+          const fade = { ArrowDown: -0.05, ArrowUp: 0.05 }[e.key] ?? 0;
+          if (!turn && !fade) return;
+          e.preventDefault();
+          set(mod(hue + turn, 360), Math.max(0, Math.min(1, saturation + fade)));
+        },
+      },
+      dot
+    );
+    const place = () => {
+      const [hue, saturation] = rgbToHs(look.rgb);
+      const angle = (hue * Math.PI) / 180;
+      const left = 50 + 50 * saturation * Math.cos(angle);
+      const top = 50 + 50 * saturation * Math.sin(angle);
+      dot.style.cssText = `left:${left}%;top:${top}%;background:rgb(${look.rgb.join(",")})`;
+    };
+    place();
+    return wheel;
   }
 
   // Arrival preview
