@@ -77,7 +77,6 @@ Home Assistant can't reliably tell a person from an automation or a wall switch,
 - Leaving home doesn't end a flow. Use a bar's end action or a *Nobody is home* flow.
 - Sun moments come from the home location set in Home Assistant. The timeline shows them for the day chosen in the simulation.
 - Light Planner schedules lights and scenes only. For locks, garage doors and heating, use automations or a general scheduler.
-- The target picker is part of Home Assistant's frontend and isn't an official interface for custom panels, so a Home Assistant update may affect it. Light Planner falls back to plain lists if it's missing.
 
 ## Development
 
