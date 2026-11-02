@@ -34,10 +34,9 @@ Say your evening lights start at sunset, two more lamps join at 17:30, one goes 
 
 ![Picking a target and leaving something out](https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/target-picker.png)
 
-<p>
-  <img src="https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/editor.png" alt="Editing a time window with the color wheel" width="49%" align="top">
-  <img src="https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/simulation.png" alt="The simulation of arriving home" width="49%" align="top">
-</p>
+![The simulation showing every light while the time moves](https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/simulation.gif)
+
+<img src="https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/editor.png" alt="Editing a time window with the color wheel" width="60%">
 
 ## Requirements
 
