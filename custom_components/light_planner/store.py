@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class PlannerStore:
     def __init__(self, hass: HomeAssistant) -> None:
+        self._hass = hass
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.flows")
         self.flows: list[dict[str, Any]] = []
         # Flow id, bar id, entity id.
@@ -40,6 +41,11 @@ class PlannerStore:
 
     def save(self) -> None:
         self._store.async_delay_save(self._data, 1)
+
+    async def async_remove(self) -> None:
+        """Leaves nothing behind, including the schedules of versions before 0.2."""
+        await self._store.async_remove()
+        await Store(self._hass, 1, f"{DOMAIN}.schedules").async_remove()
 
     async def async_flush(self) -> None:
         """A reload creates a new store, which only sees what reached the disk."""

@@ -54,3 +54,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await engine.store.async_flush()
     frontend.async_remove_panel(hass, PANEL_PATH)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Removing the integration also removes the flows."""
+    await PlannerStore(hass).async_remove()

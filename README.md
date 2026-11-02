@@ -50,6 +50,10 @@ Home Assistant 2026.10 or newer. Excluding things from a target needs 2026.11, w
 
 Copy `custom_components/light_planner` into the `custom_components` folder of your configuration, then continue with step 2 above.
 
+## Removing
+
+Remove **Light Planner** under **Settings > Devices & services**. This also deletes your flows, so make a Home Assistant backup first if you might want them back. Then remove it from HACS and restart Home Assistant.
+
 ## Getting started
 
 1. Select **New flow** and give it a name.

@@ -1071,6 +1071,30 @@ async def test_unload_stops_timers(hass, client, freezer, on) -> None:
     assert not on
 
 
+async def test_removing_the_integration_deletes_the_flows(hass, hass_storage, client) -> None:
+    await save(client, flow())
+    hass_storage[f"{DOMAIN}.schedules"] = {"version": 1, "key": f"{DOMAIN}.schedules", "data": {}}
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert f"{DOMAIN}.flows" not in hass_storage
+    assert f"{DOMAIN}.schedules" not in hass_storage
+
+    new = MockConfigEntry(domain=DOMAIN)
+    new.add_to_hass(hass)
+    await hass.config_entries.async_setup(new.entry_id)
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN].store.flows == []
+
+
+async def test_reloading_keeps_the_flows(hass, hass_storage, client) -> None:
+    await save(client, flow())
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert [f["id"] for f in hass.data[DOMAIN].store.flows] == ["s"]
+
+
 async def test_config_flow_only_once(hass) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
