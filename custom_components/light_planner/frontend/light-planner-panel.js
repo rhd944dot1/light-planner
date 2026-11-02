@@ -528,6 +528,14 @@ function h(tag, props = {}, ...children) {
   return element;
 }
 
+function clockOf(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function isTouch() {
+  return matchMedia("(pointer: coarse)").matches;
+}
+
 function hsToRgb(hue, saturation) {
   const channel = (n) => {
     const k = (n + hue / 60) % 6;
@@ -686,7 +694,7 @@ class LightPlannerPanel extends HTMLElement {
     this._drag = null;
     const now = new Date();
     this._pvDay = (now.getDay() + 6) % 7;
-    this._pvTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    this._pvTime = clockOf(now);
   }
 
   set hass(hass) {
@@ -1315,24 +1323,22 @@ class LightPlannerPanel extends HTMLElement {
     return h("span", { class: "field-icon" }, icon(iconName), text);
   }
 
-  _renderEditor() {
-    const flow = this._current;
-    if (!flow) {
-      this._errorEl = null;
-      this._summaryEl = null;
-      this._linesEl = null;
-      this._editorEl.replaceChildren(
-        h(
-          "div",
-          { class: "card empty" },
-          h("h2", {}, this._t("empty_title")),
-          h("p", {}, this._t("empty_body")),
-          h("button", { class: "primary", onclick: () => this._addFlow() }, `+ ${this._t("new_flow")}`)
-        )
-      );
-      return;
-    }
+  _renderNoFlow() {
+    this._errorEl = null;
+    this._summaryEl = null;
+    this._linesEl = null;
+    this._editorEl.replaceChildren(
+      h(
+        "div",
+        { class: "card empty" },
+        h("h2", {}, this._t("empty_title")),
+        h("p", {}, this._t("empty_body")),
+        h("button", { class: "primary", onclick: () => this._addFlow() }, `+ ${this._t("new_flow")}`)
+      )
+    );
+  }
 
+  _flowHead(flow) {
     const name = h("input", {
       type: "text",
       value: flow.name,
@@ -1351,7 +1357,36 @@ class LightPlannerPanel extends HTMLElement {
         this._changed();
       },
     });
+    return h(
+      "div",
+      { class: "head" },
+      h("label", { class: "fld", style: "flex:1;min-width:200px" }, this._t("name"), name),
+      h("label", { class: "check" }, enabled, this._t("enabled"))
+    );
+  }
 
+  _flowActions() {
+    return h(
+      "div",
+      { class: "actions" },
+      this._statusEl,
+      h("button", { class: "danger", onclick: (e) => this._delete(e.currentTarget) }, this._t("delete")),
+      h(
+        "button",
+        { title: this._t("apply_now_title"), onclick: (e) => this._applyNow(e.currentTarget) },
+        this._t("apply_now")
+      ),
+      this._discardBtn,
+      this._saveBtn
+    );
+  }
+
+  _renderEditor() {
+    const flow = this._current;
+    if (!flow) {
+      this._renderNoFlow();
+      return;
+    }
     this._daysEl = h("div", { class: "days" });
     this._behaviorEl = h("div", { class: "grid" });
     this._manualEl = h("div", {});
@@ -1375,17 +1410,12 @@ class LightPlannerPanel extends HTMLElement {
       h(
         "div",
         { class: "card" },
-        h(
-          "div",
-          { class: "head" },
-          h("label", { class: "fld", style: "flex:1;min-width:200px" }, this._t("name"), name),
-          h("label", { class: "check" }, enabled, this._t("enabled"))
-        ),
+        this._flowHead(flow),
         this._behaviorEl,
         this._daysEl,
         this._manualEl,
         h("div", { class: "sec" }, this._t("timeline")),
-        h("p", { class: "hint", style: "margin:0 0 8px" }, this._t(matchMedia("(pointer: coarse)").matches ? "timeline_hint_touch" : "timeline_hint")),
+        h("p", { class: "hint", style: "margin:0 0 8px" }, this._t(isTouch() ? "timeline_hint_touch" : "timeline_hint")),
         h("div", { class: "scroll" }, this._linesEl),
         this._addRowArea(),
         h("p", { class: "hint" }, this._t("own_row_hint")),
@@ -1393,19 +1423,7 @@ class LightPlannerPanel extends HTMLElement {
         h("div", { class: "plain" }, h("div", { class: "sec" }, this._t("plain_words")), this._summaryEl),
         this._legend(),
         this._errorEl,
-        h(
-          "div",
-          { class: "actions" },
-          this._statusEl,
-          h("button", { class: "danger", onclick: (e) => this._delete(e.currentTarget) }, this._t("delete")),
-          h(
-            "button",
-            { title: this._t("apply_now_title"), onclick: (e) => this._applyNow(e.currentTarget) },
-            this._t("apply_now")
-          ),
-          this._discardBtn,
-          this._saveBtn
-        )
+        this._flowActions()
       )
     );
     this._fillTargetChoices();
@@ -1866,7 +1884,7 @@ class LightPlannerPanel extends HTMLElement {
 
   _addBar(event, row, track) {
     if (event.target.closest(".tbar, .handle")) return;
-    if (this._selectedBar && matchMedia("(pointer: coarse)").matches) {
+    if (this._selectedBar && isTouch()) {
       this._selectBar(null);
       return;
     }
@@ -2029,18 +2047,7 @@ class LightPlannerPanel extends HTMLElement {
       return;
     }
     this._selectedRow = row.id;
-    const rowSection = [h("div", { class: "sec" }, this._t("row_section"))];
-    if (customElements.get("ha-selector")) {
-      rowSection.push(
-        this._targetPicker(row.target, (target, picker) => {
-          row.target = target;
-          picker.value = target;
-          this._changed();
-        })
-      );
-    } else {
-      rowSection.push(h("p", { class: "hint" }, this._targetText(row)));
-    }
+    const rowSection = this._rowSection(row);
     if (!found) {
       this._detailEl.replaceChildren(...rowSection, h("p", { class: "hint" }, this._t("select_bar")));
       return;
@@ -2051,33 +2058,83 @@ class LightPlannerPanel extends HTMLElement {
       this._renderDetail();
       this._changed();
     };
-    const timeInput = (value, onchange) =>
+    this._detailEl.replaceChildren(
+      ...rowSection,
+      h("div", { class: "sec" }, this._t("selected", { who: this._targetText(row) })),
+      h(
+        "div",
+        { class: "grid" },
+        this._startFields(bar, redraw),
+        this._endFields(bar, redraw),
+        this._actionFields(bar, scene, redraw)
+      ),
+      ...(scene
+        ? [h("p", { class: "hint" }, this._t("scene_activates"))]
+        : [h("div", { class: "sec" }, this._t("look")), this._lookEditor(bar)]),
+      h(
+        "div",
+        { class: "inline" },
+        h(
+          "button",
+          {
+            class: "danger",
+            onclick: () => {
+              row.bars.splice(row.bars.indexOf(bar), 1);
+              this._selectedBar = null;
+              redraw();
+            },
+          },
+          this._t("remove_bar")
+        )
+      )
+    );
+  }
+
+  _rowSection(row) {
+    const title = h("div", { class: "sec" }, this._t("row_section"));
+    if (!customElements.get("ha-selector")) return [title, h("p", { class: "hint" }, this._targetText(row))];
+    return [
+      title,
+      this._targetPicker(row.target, (target, picker) => {
+        row.target = target;
+        picker.value = target;
+        this._changed();
+      }),
+    ];
+  }
+
+  _clockInput(value, onchange) {
+    return h("input", {
+      type: "time",
+      value: value ?? "",
+      onchange: (e) => {
+        onchange(e.target.value || null);
+        this._changed();
+      },
+    });
+  }
+
+  _offsetField(anchor) {
+    return h(
+      "label",
+      { class: "fld" },
+      this._t("offset"),
       h("input", {
-        type: "time",
-        value: value ?? "",
+        type: "number",
+        min: -720,
+        max: 720,
+        step: SNAP,
+        value: anchor.offset ?? 0,
         onchange: (e) => {
-          onchange(e.target.value || null);
+          anchor.offset = Math.max(-720, Math.min(720, Math.round(Number(e.target.value) || 0)));
           this._changed();
         },
-      });
-    const offsetInput = (anchor) =>
-      h(
-        "label",
-        { class: "fld" },
-        this._t("offset"),
-        h("input", {
-          type: "number",
-          min: -720,
-          max: 720,
-          step: SNAP,
-          value: anchor.offset ?? 0,
-          onchange: (e) => {
-            anchor.offset = Math.max(-720, Math.min(720, Math.round(Number(e.target.value) || 0)));
-            this._changed();
-          },
-        })
-      );
-    const { start, end } = bar;
+      })
+    );
+  }
+
+  _startFields(bar, redraw) {
+    const { start } = bar;
     const fields = [
       this._select_(
         this._fieldLabel(ICONS.start[start.type], this._t("starts")),
@@ -2113,15 +2170,22 @@ class LightPlannerPanel extends HTMLElement {
         )
       );
     } else if (start.type !== "time") {
-      fields.push(offsetInput(start));
+      fields.push(this._offsetField(start));
     }
     fields.push(
       h(
         "label",
         { class: "fld" },
         this._t(start.type === "time" ? "time" : "not_before"),
-        timeInput(start.time, (value) => (start.time = value))
-      ),
+        this._clockInput(start.time, (value) => (start.time = value))
+      )
+    );
+    return fields;
+  }
+
+  _endFields(bar, redraw) {
+    const { end } = bar;
+    return [
       this._select_(
         this._fieldLabel(ICONS.start[end.type], this._t("ends")),
         end.type,
@@ -2133,13 +2197,15 @@ class LightPlannerPanel extends HTMLElement {
           end.time = value === "time" ? toClock(at) : null;
           redraw();
         }
-      )
-    );
-    fields.push(
+      ),
       end.type === "time"
-        ? h("label", { class: "fld" }, this._t("time"), timeInput(end.time, (value) => (end.time = value)))
-        : offsetInput(end)
-    );
+        ? h("label", { class: "fld" }, this._t("time"), this._clockInput(end.time, (value) => (end.time = value)))
+        : this._offsetField(end),
+    ];
+  }
+
+  _actionFields(bar, scene, redraw) {
+    const fields = [];
     const set = (key) => (value) => {
       bar[key] = value;
       redraw();
@@ -2165,153 +2231,134 @@ class LightPlannerPanel extends HTMLElement {
         )
       );
     }
-    this._detailEl.replaceChildren(
-      ...rowSection,
-      h("div", { class: "sec" }, this._t("selected", { who: this._targetText(row) })),
-      h("div", { class: "grid" }, fields),
-      ...(scene
-        ? [h("p", { class: "hint" }, this._t("scene_activates"))]
-        : [h("div", { class: "sec" }, this._t("look")), this._lookEditor(bar)]),
-      h(
-        "div",
-        { class: "inline" },
-        h(
-          "button",
-          {
-            class: "danger",
-            onclick: () => {
-              row.bars.splice(row.bars.indexOf(bar), 1);
-              this._selectedBar = null;
-              redraw();
-            },
-          },
-          this._t("remove_bar")
-        )
-      )
-    );
+    return fields;
   }
 
   _lookEditor(bar) {
     const look = bar.look;
     const body = h("div", { class: "look" });
     const draw = () => {
-      const children = [
-        h(
-          "div",
-          { class: "modes" },
-          ["keep", "white", "color", "off", "unchanged"].map((mode) =>
-            h(
-              "button",
-              {
-                "aria-pressed": String(look.mode === mode),
-                onclick: () => {
-                  look.mode = mode;
-                  this._renderDetail();
-                  this._changed();
-                },
-              },
-              this._t(`look_mode.${mode}`)
-            )
-          )
-        ),
-      ];
-      if (look.mode === "off" || look.mode === "unchanged") {
-        body.replaceChildren(...children);
-        return;
-      }
-      if (look.mode !== "keep") {
-        children.push(
-          h(
-            "div",
-            { class: "swatches" },
-            PRESETS.map(([key, preset]) => {
-              const [background] = lookColors({ ...newLook(), ...preset });
-              return h("button", {
-                "aria-label": this._t(key),
-                title: this._t(key),
-                style: `background:${background}`,
-                onclick: () => {
-                  Object.assign(look, preset);
-                  draw();
-                  this._changed();
-                },
-              });
-            })
-          )
-        );
-      }
-      if (look.mode === "white") {
-        const value = h("span", {}, `${look.kelvin} K`);
-        const setKelvin = (kelvin) => {
-          look.kelvin = kelvin;
-          value.textContent = `${kelvin} K`;
-          this._changed();
-        };
-        const clamped = Math.min(6500, Math.max(2000, look.kelvin));
-        let slider;
-        if (customElements.get("ha-selector")) {
-          slider = document.createElement("ha-selector");
-          slider.hass = this._hass;
-          slider.selector = { color_temp: { unit: "kelvin", min: 2000, max: 6500 } };
-          slider.value = clamped;
-          slider.addEventListener("value-changed", (e) => setKelvin(Number(e.detail.value)));
-        } else {
-          slider = h("input", {
-            type: "range",
-            min: 2000,
-            max: 6500,
-            step: 50,
-            value: clamped,
-            oninput: (e) => setKelvin(Number(e.target.value)),
-          });
-        }
-        children.push(h("div", { class: "fld" }, h("span", {}, `${this._t("temperature")} `, value), slider));
-      }
-      if (look.mode === "color") {
-        children.push(this._colorWheel(look));
-      }
-      const percent = h("span", {}, look.brightness === null ? "" : `${look.brightness}%`);
-      children.push(
-        h(
-          "label",
-          { class: "check" },
-          h("input", {
-            type: "checkbox",
-            checked: look.brightness !== null,
-            onchange: (e) => {
-              look.brightness = e.target.checked ? 80 : null;
-              draw();
-              this._changed();
-            },
-          }),
-          this._t("set_brightness")
-        )
-      );
-      if (look.brightness !== null) {
-        children.push(
-          h(
-            "label",
-            { class: "fld" },
-            h("span", {}, `${this._t("brightness")} `, percent),
-            h("input", {
-              type: "range",
-              min: 1,
-              max: 100,
-              step: 1,
-              value: look.brightness,
-              oninput: (e) => {
-                look.brightness = Number(e.target.value);
-                percent.textContent = `${look.brightness}%`;
-                this._changed();
-              },
-            })
-          )
-        );
+      const children = [this._lookModes(look)];
+      if (look.mode !== "off" && look.mode !== "unchanged") {
+        if (look.mode !== "keep") children.push(this._swatches(look, draw));
+        if (look.mode === "white") children.push(this._temperatureField(look));
+        if (look.mode === "color") children.push(this._colorWheel(look));
+        children.push(...this._brightnessFields(look, draw));
       }
       body.replaceChildren(...children);
     };
     draw();
     return body;
+  }
+
+  _lookModes(look) {
+    return h(
+      "div",
+      { class: "modes" },
+      ["keep", "white", "color", "off", "unchanged"].map((mode) =>
+        h(
+          "button",
+          {
+            "aria-pressed": String(look.mode === mode),
+            onclick: () => {
+              look.mode = mode;
+              this._renderDetail();
+              this._changed();
+            },
+          },
+          this._t(`look_mode.${mode}`)
+        )
+      )
+    );
+  }
+
+  _swatches(look, draw) {
+    return h(
+      "div",
+      { class: "swatches" },
+      PRESETS.map(([key, preset]) => {
+        const [background] = lookColors({ ...newLook(), ...preset });
+        return h("button", {
+          "aria-label": this._t(key),
+          title: this._t(key),
+          style: `background:${background}`,
+          onclick: () => {
+            Object.assign(look, preset);
+            draw();
+            this._changed();
+          },
+        });
+      })
+    );
+  }
+
+  _temperatureField(look) {
+    const value = h("span", {}, `${look.kelvin} K`);
+    const setKelvin = (kelvin) => {
+      look.kelvin = kelvin;
+      value.textContent = `${kelvin} K`;
+      this._changed();
+    };
+    const clamped = Math.min(6500, Math.max(2000, look.kelvin));
+    let slider;
+    if (customElements.get("ha-selector")) {
+      slider = document.createElement("ha-selector");
+      slider.hass = this._hass;
+      slider.selector = { color_temp: { unit: "kelvin", min: 2000, max: 6500 } };
+      slider.value = clamped;
+      slider.addEventListener("value-changed", (e) => setKelvin(Number(e.detail.value)));
+    } else {
+      slider = h("input", {
+        type: "range",
+        min: 2000,
+        max: 6500,
+        step: 50,
+        value: clamped,
+        oninput: (e) => setKelvin(Number(e.target.value)),
+      });
+    }
+    return h("div", { class: "fld" }, h("span", {}, `${this._t("temperature")} `, value), slider);
+  }
+
+  _brightnessFields(look, draw) {
+    const fields = [
+      h(
+        "label",
+        { class: "check" },
+        h("input", {
+          type: "checkbox",
+          checked: look.brightness !== null,
+          onchange: (e) => {
+            look.brightness = e.target.checked ? 80 : null;
+            draw();
+            this._changed();
+          },
+        }),
+        this._t("set_brightness")
+      ),
+    ];
+    if (look.brightness === null) return fields;
+    const percent = h("span", {}, `${look.brightness}%`);
+    fields.push(
+      h(
+        "label",
+        { class: "fld" },
+        h("span", {}, `${this._t("brightness")} `, percent),
+        h("input", {
+          type: "range",
+          min: 1,
+          max: 100,
+          step: 1,
+          value: look.brightness,
+          oninput: (e) => {
+            look.brightness = Number(e.target.value);
+            percent.textContent = `${look.brightness}%`;
+            this._changed();
+          },
+        })
+      )
+    );
+    return fields;
   }
 
   _colorWheel(look) {
@@ -2410,8 +2457,7 @@ class LightPlannerPanel extends HTMLElement {
               type: "button",
               onclick: () => {
                 const now = new Date();
-                const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-                this._setSimulation((now.getDay() + 6) % 7, time);
+                this._setSimulation((now.getDay() + 6) % 7, clockOf(now));
               },
             },
             this._t("now")
