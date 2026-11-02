@@ -69,14 +69,11 @@ const I18N = {
     delete_confirm: "Really delete?",
     discard: "Discard changes",
     simulation: "Simulation",
-    arriving_on: "Arriving on",
+    day: "Day",
     at: "at",
-    col_light: "Light",
-    col_result: "Result",
-    col_flow: "From flow",
+    now: "Now",
     no_lights: "No lights in any flow yet.",
     unchanged: "Unchanged",
-    none: "None",
     off: "Off",
     also_activated: "Also activated: {scenes}",
     scene_bar: "Scene",
@@ -240,14 +237,11 @@ const I18N = {
     delete_confirm: "Wirklich löschen?",
     discard: "Änderungen verwerfen",
     simulation: "Simulation",
-    arriving_on: "Heimkommen am",
+    day: "Tag",
     at: "um",
-    col_light: "Licht",
-    col_result: "Ergebnis",
-    col_flow: "Aus Flow",
+    now: "Jetzt",
     no_lights: "Noch keine Lichter in einem Flow.",
     unchanged: "Unverändert",
-    none: "Keiner",
     off: "Aus",
     also_activated: "Außerdem aktiviert: {scenes}",
     scene_bar: "Szene",
@@ -406,7 +400,8 @@ label.check { display: inline-flex; align-items: center; gap: 8px; }
 .line-name { position: sticky; left: 0; z-index: 4; background: var(--card-background-color); display: flex; align-items: center; gap: 6px;
   padding: 4px 6px 4px 2px; font-size: 13px; font-weight: 500; line-height: 1.25; min-width: 0; overflow-wrap: break-word; }
 .line-name ha-icon { color: var(--secondary-text-color); flex: none; }
-.line-name small { display: block; font-weight: 400; font-size: 11px; color: var(--secondary-text-color); }
+.line-name small { display: block; font-weight: 400; font-size: 11px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.line-name .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; hyphens: auto; }
 .line-name > span { min-width: 0; }
 .line-name { cursor: pointer; }
 .line-name.sel { box-shadow: inset 2px 0 0 var(--primary-color); }
@@ -446,7 +441,7 @@ label.check { display: inline-flex; align-items: center; gap: 8px; }
 .flows .axis-all span { position: absolute; font-size: 11px; color: var(--secondary-text-color); }
 .flow { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: stretch; width: 100%; padding: 0; min-height: 48px; border: 0; border-top: 1px solid var(--divider-color); border-radius: 0; text-align: left; }
 .flow.sel { background: color-mix(in srgb, var(--primary-color) 14%, transparent); }
-.flow-name { padding: 4px 8px; line-height: 1.3; font-weight: 500; font-size: 13px; overflow-wrap: break-word; min-width: 0; }
+.flow-name { padding: 4px 8px; line-height: 1.3; font-weight: 500; font-size: 13px; overflow-wrap: break-word; hyphens: auto; min-width: 0; }
 .flow-name .muted { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-weight: 400; font-size: 11px; --mdc-icon-size: 14px; }
 .flow-axis { display: grid; grid-template-columns: 170px minmax(0, 1fr); }
 .dot { color: var(--primary-color); }
@@ -485,11 +480,21 @@ details.legend summary { cursor: pointer; color: var(--secondary-text-color); fo
 .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 .actions .status { margin-right: auto; }
 .error { color: var(--error-color); font-size: 13px; margin: 6px 0 0; }
-.pv-controls { display: flex; gap: 12px; flex-wrap: wrap; }
-.pv-controls label { width: 130px; }
-.pv-controls label.wide { flex: 1; min-width: 200px; }
-.pv { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; margin-top: 12px; font-size: 13px; align-items: center; }
-.pill { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; }
+.sim-head { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.sim-head .days { margin: 4px 0 0; }
+.sim-time { display: flex; align-items: flex-end; gap: 8px; }
+.sim-time input { width: 110px; }
+input.sim-slider { -webkit-appearance: none; appearance: none; display: block; height: 32px; margin: 8px 0 0; padding: 0; background: transparent; --pos: 0%; }
+input.sim-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--primary-color) var(--pos), var(--divider-color) var(--pos)); }
+input.sim-slider::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--primary-color) var(--pos), var(--divider-color) var(--pos)); }
+input.sim-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: var(--primary-color); }
+input.sim-slider::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--primary-color); }
+.sim-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-top: 8px; }
+.sim-tile { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 8px 12px; border: 1px solid var(--divider-color); border-radius: var(--ha-card-border-radius, 12px); }
+.sim-badge { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: var(--tint); background: color-mix(in srgb, var(--tint) 20%, transparent); --mdc-icon-size: 20px; }
+.sim-text { min-width: 0; font-size: 14px; font-weight: 500; line-height: 1.3; }
+.sim-text > * { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sim-text small { font-size: 12px; font-weight: 400; color: var(--secondary-text-color); }
 .empty { text-align: center; padding: 32px 16px; }
 .empty h2 { font-size: 18px; font-weight: 500; margin: 0 0 8px; }
 .empty p { color: var(--secondary-text-color); margin: 0 auto 16px; max-width: 420px; }
@@ -500,7 +505,8 @@ details.legend summary { cursor: pointer; color: var(--secondary-text-color); fo
 @media (max-width: 600px) {
   main { padding: 8px; }
   .lines { min-width: 640px; }
-  .line, .flow, .flow-axis { grid-template-columns: 108px minmax(0, 1fr); }
+  .line, .flow, .flow-axis { grid-template-columns: 124px minmax(0, 1fr); }
+  .line-name:not(.sel) button { display: none; }
 }
 `;
 
@@ -747,11 +753,6 @@ class LightPlannerPanel extends HTMLElement {
   _entityLabel(entityId) {
     const { primary, secondary } = this._entityParts(entityId);
     return secondary ? `${primary} (${secondary})` : primary;
-  }
-
-  _entityCell(entityId) {
-    const { primary, secondary } = this._entityParts(entityId);
-    return h("span", {}, primary, secondary ? h("small", { class: "where" }, secondary) : null);
   }
 
   _lookPhrase(look) {
@@ -1010,13 +1011,21 @@ class LightPlannerPanel extends HTMLElement {
     this._requestPreview();
   }
 
+  // Merged, not restarted: while the slider moves, every round trip shows the latest time.
   _requestPreview() {
-    clearTimeout(this._previewTimer);
-    this._previewTimer = setTimeout(() => this._loadPreview(), 120);
+    if (this._previewLoading) {
+      this._previewAgain = true;
+      return;
+    }
+    this._previewTimer ??= setTimeout(() => {
+      this._previewTimer = null;
+      this._loadPreview();
+    }, 40);
   }
 
   async _loadPreview() {
     const seq = ++this._previewSeq;
+    this._previewLoading = true;
     try {
       const result = await this._hass.callWS({
         type: "light_planner/preview",
@@ -1037,6 +1046,12 @@ class LightPlannerPanel extends HTMLElement {
       }
     } catch (err) {
       this._pageError.textContent = err.message;
+    } finally {
+      this._previewLoading = false;
+      if (this._previewAgain) {
+        this._previewAgain = false;
+        this._requestPreview();
+      }
     }
   }
 
@@ -1718,7 +1733,7 @@ class LightPlannerPanel extends HTMLElement {
             },
           },
           icon(ICONS.type[rowType], this._t(`type.${rowType}`)),
-          h("span", {}, name, where ? h("small", {}, where) : null),
+          h("span", {}, h("span", { class: "clamp" }, name), where ? h("small", {}, where) : null),
           h(
             "button",
             {
@@ -2310,6 +2325,7 @@ class LightPlannerPanel extends HTMLElement {
     });
     this._pvSlider = h("input", {
       type: "range",
+      class: "sim-slider",
       min: 0,
       max: DAY - SNAP,
       step: SNAP,
@@ -2321,35 +2337,57 @@ class LightPlannerPanel extends HTMLElement {
         this._requestPreview();
       },
     });
+    this._pvDayButtons = this._dayNames.map((name, index) =>
+      h("button", { type: "button", onclick: () => this._setSimulation(index, this._pvTime) }, name)
+    );
     this._previewEl.replaceChildren(
       h("div", { class: "sec", style: "margin-top:0" }, this._t("simulation")),
       h(
         "div",
-        { class: "pv-controls" },
-        this._select_(
-          this._t("arriving_on"),
-          String(this._pvDay),
-          this._dayNames.map((name, index) => [String(index), name]),
-          (value) => {
-            this._pvDay = Number(value);
-            this._renderFlows();
-            this._requestPreview();
-          }
-        ),
-        h("label", { class: "fld" }, this._t("at"), this._pvTimeInput),
-        h("label", { class: "fld wide" }, this._t("timeline"), this._pvSlider)
+        { class: "sim-head" },
+        h("div", { class: "fld" }, this._t("day"), h("div", { class: "days" }, this._pvDayButtons)),
+        h(
+          "div",
+          { class: "sim-time" },
+          h("label", { class: "fld" }, this._t("time"), this._pvTimeInput),
+          h(
+            "button",
+            {
+              type: "button",
+              onclick: () => {
+                const now = new Date();
+                const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+                this._setSimulation((now.getDay() + 6) % 7, time);
+              },
+            },
+            this._t("now")
+          )
+        )
       ),
+      this._pvSlider,
       this._previewResult
     );
     this._syncSimulation();
   }
 
+  _setSimulation(day, time) {
+    this._pvDay = day;
+    this._pvTime = time;
+    this._pvTimeInput.value = time;
+    this._syncSimulation();
+    this._renderFlows();
+    this._requestPreview();
+  }
+
   _syncSimulation(fromSlider = false) {
     const minutes = toMinutes(this._pvTime);
     const axis = this._axis ?? 0;
-    if (!fromSlider && this._pvSlider) this._pvSlider.value = this._relative(minutes, axis);
+    const position = this._relative(minutes, axis);
+    if (!fromSlider && this._pvSlider) this._pvSlider.value = position;
+    this._pvSlider?.style.setProperty("--pos", `${(position / DAY) * 100}%`);
+    this._pvDayButtons?.forEach((button, index) => button.setAttribute("aria-pressed", String(index === this._pvDay)));
     for (const line of this._simEls ?? []) {
-      line.style.left = `${(this._relative(minutes, axis) / DAY) * 100}%`;
+      line.style.left = `${(position / DAY) * 100}%`;
     }
   }
 
@@ -2360,33 +2398,32 @@ class LightPlannerPanel extends HTMLElement {
       this._previewResult.replaceChildren(h("p", { class: "muted" }, this._t("no_lights")));
       return;
     }
-    const cells = [
-      h("span", { class: "muted" }, this._t("col_light")),
-      h("span", { class: "muted" }, this._t("col_result")),
-      h("span", { class: "muted" }, this._t("col_flow")),
-    ];
-    for (const light of result.lights) {
-      cells.push(this._entityCell(light.id));
-      if (!light.action) {
-        cells.push(h("span", { class: "muted" }, this._t("unchanged")));
-        cells.push(h("span", { class: "muted" }, this._t("none")));
-        continue;
-      }
-      if (light.action.kind === "off") {
-        cells.push(h("span", {}, h("span", { class: "pill", style: "border:1px solid var(--divider-color)" }, this._t("off"))));
-      } else {
-        const [background, color] = lookColors(light.action);
-        cells.push(
-          h(
-            "span",
-            {},
-            h("span", { class: "pill", style: `background:${background};color:${color}` }, this._lookLabel(light.action))
-          )
-        );
-      }
-      cells.push(h("span", {}, light.flow.trim() || this._t("unnamed")));
-    }
-    const children = [h("div", { class: "pv" }, cells)];
+    const tiles = result.lights.map((light) => {
+      const { action } = light;
+      const off = action?.kind === "off";
+      let tint = "var(--secondary-text-color)";
+      if (action && !off) tint = action.mode === "keep" ? "var(--state-light-active-color, var(--primary-color))" : lookColors(action)[0];
+      const { primary, secondary } = this._entityParts(light.id);
+      let state = this._t("unchanged");
+      if (action) state = `${off ? this._t("off") : this._lookLabel(action)} · ${light.flow.trim() || this._t("unnamed")}`;
+      return h(
+        "div",
+        { class: "sim-tile" },
+        h(
+          "span",
+          { class: "sim-badge", style: `--tint:${tint}` },
+          icon(off ? "mdi:lightbulb-off-outline" : action ? "mdi:lightbulb-on" : "mdi:lightbulb-outline")
+        ),
+        h(
+          "span",
+          { class: "sim-text" },
+          h("span", {}, primary),
+          secondary ? h("small", {}, secondary) : null,
+          h("small", {}, state)
+        )
+      );
+    });
+    const children = [h("div", { class: "sim-tiles" }, tiles)];
     if (result.scenes.length) {
       const scenes = this._list(result.scenes.map((s) => this._entityLabel(s.id)));
       children.push(h("p", { class: "muted" }, this._t("also_activated", { scenes })));
