@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["real_sun: uses the real sun calculation instead of the fake one"]

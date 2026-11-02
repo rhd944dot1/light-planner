@@ -1,0 +1,15 @@
+{
+  "domain": "light_planner",
+  "name": "Light Planner",
+  "after_dependencies": ["person", "scene", "zone"],
+  "codeowners": ["@rhd944dot1"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],
+  "documentation": "https://github.com/rhd944dot1/light-planner",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/rhd944dot1/light-planner/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.4.0"
+}

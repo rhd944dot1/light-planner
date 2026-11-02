@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Light Planner",
+        "description": "Adds Light Planner to the sidebar, where you create your flows."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Light Planner is already set up."
+    }
+  }
+}
