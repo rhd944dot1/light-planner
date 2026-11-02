@@ -51,6 +51,7 @@ from .schedule import (
     events_between,
     left_alone,
     manual_counts,
+    missed_events,
     next_moment,
     run_start,
 )
@@ -198,8 +199,24 @@ class Engine:
                 EVENT_STATE_CHANGED, self._light_changed, event_filter=_is_light
             )
         )
-        self._last = dt_util.utcnow()
+        since = dt_util.parse_datetime(self.store.handled) if self.store.handled else None
+        self._handled_until(dt_util.utcnow())
         self._plan()
+        if since is not None:
+            self.hass.async_create_task(self._catch_up(since))
+
+    def _handled_until(self, moment: datetime) -> None:
+        self._last = moment
+        self.store.handled = moment.isoformat()
+        self.store.save()
+
+    async def _catch_up(self, since: datetime) -> None:
+        """Starts and ends that fell into the time Home Assistant wasn't running."""
+        async with self._lock:
+            if not self._running:
+                return
+            now = dt_util.utcnow()
+            await self._handle(missed_events(self.flows, since, now, self.env), now)
 
     def _rebuild(self) -> None:
         self.flows = [Flow.from_dict(raw) for raw in self.store.flows]
@@ -230,7 +247,7 @@ class Engine:
         self.store.save()
         self._rebuild()
         if self._running:
-            self._last = dt_util.utcnow()
+            self._handled_until(dt_util.utcnow())
             self._plan()
 
     # Targets
@@ -416,14 +433,16 @@ class Engine:
         self._cancel_timer = None
         async with self._lock:
             now = dt_util.utcnow()
-            for event in events_between(self.flows, self._last, now, self.env):
-                if event.kind == "start":
-                    await self._on_start(event.flow, event.row, event.bar, now)
-                else:
-                    await self._on_end(event, now)
-            self._last = now
-            self.store.save()
+            await self._handle(events_between(self.flows, self._last, now, self.env), now)
+            self._handled_until(now)
             self._plan()
+
+    async def _handle(self, events: list[PlanEvent], now: datetime) -> None:
+        for event in events:
+            if event.kind == "start":
+                await self._on_start(event.flow, event.row, event.bar, now)
+            else:
+                await self._on_end(event, now)
 
     async def _on_start(self, flow: Flow, row: Row, bar: Bar, now: datetime) -> None:
         if not self._condition_met(flow):

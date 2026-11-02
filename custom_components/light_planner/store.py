@@ -24,11 +24,14 @@ class PlannerStore:
         self.snapshots: dict[str, dict[str, dict[str, Any]]] = {}
         # Entity id, moment of the last change that didn't come from Light Planner.
         self.manual: dict[str, str] = {}
+        # The moment up to which every start and end has been handled.
+        self.handled: str | None = None
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
         self.snapshots = data.get("snapshots", {})
         self.manual = data.get("manual", {})
+        self.handled = data.get("handled")
         self.flows = []
         for raw in data.get("flows", []):
             try:
@@ -37,7 +40,12 @@ class PlannerStore:
                 _LOGGER.warning("Skipping invalid flow %s: %s", raw.get("name"), err)
 
     def _data(self) -> dict[str, Any]:
-        return {"flows": self.flows, "snapshots": self.snapshots, "manual": self.manual}
+        return {
+            "flows": self.flows,
+            "snapshots": self.snapshots,
+            "manual": self.manual,
+            "handled": self.handled,
+        }
 
     def save(self) -> None:
         self._store.async_delay_save(self._data, 1)

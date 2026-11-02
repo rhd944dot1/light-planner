@@ -1114,3 +1114,60 @@ async def test_real_sun_moments(hass) -> None:
     assert below < sunset
     assert sun.below(50, day) is not None  # never that high in November: below all day
     assert sun.below(-80, day) is None  # never that low: above that all day
+
+
+async def restart(hass, freezer, moment: datetime) -> None:
+    """Home Assistant is off until the given moment."""
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    freezer.move_to(moment)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_restart_catches_up_on_a_missed_start(hass, client, freezer, on, off) -> None:
+    await save(client, flow())
+    await restart(hass, freezer, local(18, 30))
+    assert "light.a" in calls(on)
+    assert not off
+
+
+async def test_restart_catches_up_on_a_missed_end(hass, client, freezer, on, off) -> None:
+    await save(client, flow())
+    await to(hass, freezer, local(18))
+    on.clear()
+    await restart(hass, freezer, local(23, 30))
+    assert not on
+    assert "light.a" in calls(off)
+
+
+async def test_restart_skips_a_window_fully_missed(hass, client, freezer, on, off) -> None:
+    await save(client, flow())
+    await restart(hass, freezer, local(23, 30))
+    assert not on
+    assert not off
+
+
+async def test_restart_without_a_missed_change_does_nothing(
+    hass, client, freezer, on, off
+) -> None:
+    await save(client, flow())
+    await to(hass, freezer, local(18))
+    on.clear()
+    await restart(hass, freezer, local(19))
+    assert not on
+    assert not off
+
+
+async def test_catch_up_respects_the_condition(hass, client, freezer, on) -> None:
+    await save(client, flow(condition="anyone_home"))
+    await restart(hass, freezer, local(18, 30))
+    assert not on
+
+
+async def test_ticks_go_on_after_a_catch_up(hass, client, freezer, on, off) -> None:
+    await save(client, flow())
+    await restart(hass, freezer, local(18, 30))
+    await to(hass, freezer, local(23))
+    assert "light.a" in calls(off)

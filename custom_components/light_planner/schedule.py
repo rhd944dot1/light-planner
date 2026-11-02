@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
 from typing import Any, Protocol
@@ -492,11 +492,9 @@ def _bars(flows: Iterable[Flow]) -> Iterable[tuple[Flow, Row, Bar]]:
                     yield flow, row, bar
 
 
-def events_between(
+def _windows(
     flows: Iterable[Flow], since: datetime, until: datetime, env: Env
-) -> list[Event]:
-    """Starts and ends in (since, until], ends first so a handover sees the new state."""
-    events: list[Event] = []
+) -> Iterator[tuple[Flow, Row, Bar, Window]]:
     first = since.astimezone(env.tz).date() - timedelta(days=2)
     last = until.astimezone(env.tz).date()
     for flow, row, bar in _bars(flows):
@@ -504,14 +502,38 @@ def events_between(
         while day <= last:
             found = window(flow, bar, day, env)
             day += timedelta(days=1)
-            if found is None:
-                continue
-            if since < found.start <= until:
-                events.append(Event(found.start, "start", flow, row, bar))
-            if since < found.end <= until:
-                events.append(Event(found.end, "end", flow, row, bar))
-    events.sort(key=lambda e: (e.moment, e.kind != "end"))
-    return events
+            if found is not None:
+                yield flow, row, bar, found
+
+
+def _in_order(events: list[Event]) -> list[Event]:
+    return sorted(events, key=lambda e: (e.moment, e.kind != "end"))
+
+
+def events_between(
+    flows: Iterable[Flow], since: datetime, until: datetime, env: Env
+) -> list[Event]:
+    """Starts and ends in (since, until], ends first so a handover sees the new state."""
+    events: list[Event] = []
+    for flow, row, bar, found in _windows(flows, since, until, env):
+        if since < found.start <= until:
+            events.append(Event(found.start, "start", flow, row, bar))
+        if since < found.end <= until:
+            events.append(Event(found.end, "end", flow, row, bar))
+    return _in_order(events)
+
+
+def missed_events(
+    flows: Iterable[Flow], since: datetime, until: datetime, env: Env
+) -> list[Event]:
+    """What is still relevant after an outage: a time window fully inside it changes nothing."""
+    events: list[Event] = []
+    for flow, row, bar, found in _windows(flows, since, until, env):
+        if since < found.start <= until < found.end:
+            events.append(Event(found.start, "start", flow, row, bar))
+        if found.start <= since < found.end <= until:
+            events.append(Event(found.end, "end", flow, row, bar))
+    return _in_order(events)
 
 
 def next_moment(flows: Iterable[Flow], after: datetime, env: Env) -> datetime | None:

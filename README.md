@@ -76,7 +76,7 @@ Home Assistant can't reliably tell a person from an automation or a wall switch,
 
 ## Good to know
 
-- A restart doesn't catch up on starts or ends it missed.
+- After a restart, Light Planner catches up on starts and ends it missed while Home Assistant was off. A time window that began and ended during that time is skipped. A light that isn't available yet right after the restart misses the catch-up.
 - *Apply now* applies what the flow schedules for this moment. If no time window is running, nothing happens.
 - Leaving home doesn't end a flow. Use a bar's end action or a *Nobody is home* flow.
 - Sun moments come from the home location set in Home Assistant. The timeline shows them for the day chosen in the simulation.
