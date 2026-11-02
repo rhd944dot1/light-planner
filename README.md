@@ -16,22 +16,28 @@ Schedule your Home Assistant lights on a visual timeline in the sidebar, without
 
 Say your evening lights start at sunset, two more lamps join at 17:30, one goes off at 19:00, and the bedroom turns dim red at 22:00. Light Planner keeps that schedule in one named flow you can see and drag, and when you come home at 20:00 it sets every lamp to what it should be at that moment.
 
-![The timeline of a flow](https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/timeline.png)
+![Dragging bars on the timeline of a flow](https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/timeline.gif)
 
 ## Features
 
 - **Named flows**: a light schedule such as "Evening light". Each row on the timeline is a target, each bar a time window for it. Lights can join and leave one after another.
-- **Drag to edit**: move a bar, drag its edges, click an empty spot to add a time window.
+- **Drag to edit**: move a bar, drag its edges, click an empty spot to add a time window. On a phone, tap a bar first, then drag its arrows.
 - **Home Assistant's own target picker**: lights, devices, areas, floors, labels and scenes, several in one row. A newly labeled light joins on its own. From Home Assistant 2026.11 you can exclude things from a target, such as a device's status LED.
 - **Start** at a time, at sunset or sunrise with an offset, or when the sun drops below an elevation, optionally "not before" a time.
 - **End** at a time or at sunset or sunrise with an offset, then turn off, restore the previous state, or do nothing.
-- **Looks per time window**: white, color, keep color, off, or leave alone.
+- **Looks per time window**: white, any color from a color wheel, keep color, off, or leave alone.
 - **Weekdays** and **conditions**: anyone, everyone or nobody home, a specific person, or presence doesn't matter.
 - **Arriving home** applies whatever is scheduled at that moment, even if you missed the start.
 - **Don't touch manually changed lights**: an optional setting per flow leaves lights alone that someone or something else changed.
 - **Plain-language summary** of what each flow does, and a **simulation** of what happens when you arrive home at any time.
+- **English and German**, following your Home Assistant language.
 
 ![Picking a target and leaving something out](https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/target-picker.png)
+
+<p>
+  <img src="https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/editor.png" alt="Editing a time window with the color wheel" width="49%" align="top">
+  <img src="https://raw.githubusercontent.com/rhd944dot1/light-planner/main/docs/images/simulation.png" alt="The simulation of arriving home" width="49%" align="top">
+</p>
 
 ## Requirements
 
@@ -58,7 +64,7 @@ Remove **Light Planner** under **Settings > Devices & services**. This also dele
 
 1. Select **New flow** and give it a name.
 2. Under **Add row**, pick a light, device, area, label or scene.
-3. Click the row's empty timeline to add a time window, then drag it into place.
+3. Click or tap the row's empty timeline to add a time window, then drag it into place.
 4. Select the bar to set its start, end and look.
 5. Choose when the flow applies, read **In plain words** to check it does what you mean, and select **Save**.
 
