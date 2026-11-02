@@ -185,6 +185,8 @@ const PRESETS = [
   ["preset.green", { mode: "color", rgb: [40, 200, 80] }],
 ];
 
+const HANDLE = 36;
+
 const STYLE = `
 :host { display: block; min-height: 100%; background: var(--primary-background-color); color: var(--primary-text-color);
   font-family: var(--paper-font-body1_-_font-family, var(--ha-font-family-body, sans-serif)); font-size: 14px; }
@@ -235,11 +237,11 @@ label.check { display: inline-flex; align-items: center; gap: 8px; }
 .sunline { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--warning-color, #e08a00); pointer-events: none; }
 .simline { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--error-color); pointer-events: none; z-index: 3; }
 .tbar { position: absolute; top: 8px; bottom: 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; padding: 0 5px; font-size: 11px;
-  white-space: nowrap; overflow: hidden; cursor: grab; touch-action: none; user-select: none; z-index: 2; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); --mdc-icon-size: 15px; }
+  white-space: nowrap; overflow: hidden; cursor: grab; touch-action: pan-x pan-y; user-select: none; z-index: 2; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); --mdc-icon-size: 15px; }
 .tbar:active { cursor: grabbing; }
 .tbar .txt { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tbar .spacer { flex: 1; }
-.tbar.sel { box-shadow: inset 0 0 0 2px var(--primary-text-color); }
+.tbar.sel { box-shadow: inset 0 0 0 2px var(--primary-text-color); touch-action: none; }
 .tbar:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
 .tbar.dim { opacity: .45; }
 .tbar.wrapping { border-top-right-radius: 0; border-bottom-right-radius: 0; }
@@ -248,9 +250,12 @@ label.check { display: inline-flex; align-items: center; gap: 8px; }
 .paint-off { background: repeating-linear-gradient(135deg, var(--secondary-background-color), var(--secondary-background-color) 5px, var(--divider-color) 5px, var(--divider-color) 10px); color: var(--primary-text-color); }
 .paint-unchanged { background: var(--card-background-color); color: var(--secondary-text-color); box-shadow: inset 0 0 0 1px var(--secondary-text-color); }
 .paint-scene { background: color-mix(in srgb, var(--primary-color) 30%, transparent); color: var(--primary-text-color); }
-.grip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
+.grip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
 .grip.l { left: 0; }
 .grip.r { right: 0; }
+.handle { position: absolute; top: 0; bottom: 0; width: ${HANDLE}px; display: flex; align-items: center; cursor: ew-resize; touch-action: none; user-select: none; z-index: 3; --mdc-icon-size: 18px; }
+.handle.start { justify-content: flex-end; }
+.handle ha-icon { display: flex; align-items: center; height: 34px; border-radius: 6px; background: var(--primary-color); color: var(--text-primary-color, #fff); }
 .bubble { position: fixed; z-index: 50; background: var(--primary-text-color); color: var(--card-background-color); padding: 4px 8px; border-radius: 6px; font-size: 12px;
   pointer-events: none; transform: translate(-50%, -140%); white-space: nowrap; }
 .flows .axis-all { position: relative; height: 18px; }
@@ -305,7 +310,8 @@ details.legend summary { cursor: pointer; color: var(--secondary-text-color); fo
 .empty h2 { font-size: 18px; font-weight: 500; margin: 0 0 8px; }
 .empty p { color: var(--secondary-text-color); margin: 0 auto 16px; max-width: 420px; }
 @media (pointer: coarse) {
-  .grip { width: 18px; }
+  .grip { display: none; }
+  .track { height: 56px; }
 }
 @media (max-width: 600px) {
   main { padding: 8px; }
@@ -1559,6 +1565,7 @@ class LightPlannerPanel extends HTMLElement {
         onpointermove: (e) => this._dragMove(e),
         onpointerup: () => this._dragEnd(),
         onpointercancel: () => this._dragEnd(),
+        onclick: () => this._tapBar(bar),
         onkeydown: (e) => this._barKey(e, row, bar),
       });
       element.dataset.bar = bar.id;
@@ -1567,8 +1574,23 @@ class LightPlannerPanel extends HTMLElement {
     };
     const main = piece("main");
     const wrap = piece("wrapped");
-    this._barEls.set(bar.id, { main, wrap, row, bar });
+    const handle = (side, name) =>
+      h(
+        "div",
+        {
+          class: `handle ${side}`,
+          onpointerdown: (e) => this._dragStart(e, row, bar, e.currentTarget, side),
+          onpointermove: (e) => this._dragMove(e),
+          onpointerup: () => this._dragEnd(),
+          onpointercancel: () => this._dragEnd(),
+        },
+        icon(name)
+      );
+    const handles =
+      this._selectedBar === bar.id ? { start: handle("start", "mdi:chevron-left"), end: handle("end", "mdi:chevron-right") } : null;
+    this._barEls.set(bar.id, { main, wrap, row, bar, handles });
     track.append(main, wrap);
+    if (handles) track.append(handles.start, handles.end);
     this._paintBar(bar);
     this._fillBar(bar);
   }
@@ -1589,6 +1611,13 @@ class LightPlannerPanel extends HTMLElement {
     parts.wrap.className = `tbar wrapped ${paint}${selected}${dim}`;
     parts.wrap.hidden = fits;
     parts.wrap.style.cssText = `${parts.wrap.dataset.paint}left:0;width:${((length - firstWidth) / DAY) * 100}%`;
+    if (parts.handles) {
+      // Beside the bar, so that even a short bar can still be grabbed in the middle.
+      const edge = (minutes) => (mod(minutes, DAY) / DAY) * 100;
+      const place = (left) => `left:clamp(0px, ${left}, calc(100% - ${HANDLE}px))`;
+      parts.handles.start.style.cssText = place(`calc(${edge(from)}% - ${HANDLE}px)`);
+      parts.handles.end.style.cssText = place(`${edge(from + length)}%`);
+    }
     const title = `${this._startText(bar.start)} – ${this._endText(bar.end)}${dim ? `. ${this._t("not_this_day", { day: this._dayNames[this._pvDay] })}` : ""}`;
     parts.main.title = title;
     parts.wrap.title = title;
@@ -1619,7 +1648,11 @@ class LightPlannerPanel extends HTMLElement {
   }
 
   _addBar(event, row, track) {
-    if (event.target.closest(".tbar")) return;
+    if (event.target.closest(".tbar, .handle")) return;
+    if (this._selectedBar && matchMedia("(pointer: coarse)").matches) {
+      this._selectBar(null);
+      return;
+    }
     const box = track.getBoundingClientRect();
     const start = snap(((event.clientX - box.left) / box.width) * DAY + this._axis * 60);
     const others = this._others(row, null);
@@ -1663,13 +1696,25 @@ class LightPlannerPanel extends HTMLElement {
     return [low, high];
   }
 
-  _dragStart(event, row, bar, element) {
+  _selectBar(id) {
+    this._selectedBar = id;
+    this._renderDetail();
+    this._renderTimeline();
+  }
+
+  // By touch the first tap only selects, so that a swipe over a bar still scrolls the page.
+  _tapBar(bar) {
+    if (this._selectedBar !== bar.id) this._selectBar(bar.id);
+  }
+
+  _dragStart(event, row, bar, element, side = null) {
     if (event.button !== 0 && event.pointerType === "mouse") return;
+    if (!side && event.pointerType !== "mouse" && this._selectedBar !== bar.id) return;
     event.preventDefault();
     event.stopPropagation();
     element.focus({ preventScroll: true });
     const grip = event.target.closest?.(".grip");
-    const mode = grip ? (grip.classList.contains("l") ? "start" : "end") : "move";
+    const mode = side ?? (grip ? (grip.classList.contains("l") ? "start" : "end") : "move");
     const [start, end] = this._span(bar);
     this._drag = {
       row,
@@ -1705,8 +1750,11 @@ class LightPlannerPanel extends HTMLElement {
   _dragMove(event) {
     const drag = this._drag;
     if (!drag) return;
-    if (!drag.moved && Math.abs(event.clientX - drag.x) < 4) return;
-    drag.moved = true;
+    if (!drag.moved) {
+      if (Math.abs(event.clientX - drag.x) < (event.pointerType === "mouse" ? 4 : 8)) return;
+      drag.moved = true;
+      drag.x = event.clientX;
+    }
     this._shift(drag, ((event.clientX - drag.x) / drag.width) * DAY);
     this._paintBar(drag.bar);
     this._showBubble(event, drag.bar);
