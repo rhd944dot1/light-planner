@@ -2,6 +2,7 @@
   "domain": "light_planner",
   "name": "Light Planner",
   "after_dependencies": ["person", "scene", "zone"],
+  "categories": ["lighting"],
   "codeowners": ["@rhd944dot1"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],
