@@ -977,7 +977,6 @@ class LightPlannerPanel extends HTMLElement {
       this._options = options;
       this._flows = list.flows.map(clone);
       for (const flow of list.flows) this._saved[flow.id] = JSON.stringify(flow);
-      this._selected = this._flows[0]?.id ?? null;
     } catch (err) {
       this._pageError.textContent = err.message;
     }
@@ -1013,16 +1012,24 @@ class LightPlannerPanel extends HTMLElement {
     this._selectedRow = null;
     this._renderFlows();
     this._renderEditor();
+    this._revealEditor();
     this._requestPreview();
   }
 
+  // A second tap on the open flow closes it.
   _select(id) {
-    this._selected = id;
+    this._selected = id === this._selected ? null : id;
     this._selectedBar = null;
     this._selectedRow = null;
     this._renderFlows();
     this._renderEditor();
     this._syncSimulation();
+    if (this._selected) this._revealEditor();
+  }
+
+  // On a phone the editor opens below the list, out of sight.
+  _revealEditor() {
+    if (isTouch()) this._editorEl.scrollIntoView({ block: "start" });
   }
 
   _changed() {
@@ -1121,7 +1128,7 @@ class LightPlannerPanel extends HTMLElement {
       }
       delete this._saved[flow.id];
       this._flows = this._flows.filter((f) => f.id !== flow.id);
-      this._selected = this._flows[0]?.id ?? null;
+      this._selected = null;
       this._selectedBar = null;
       this._selectedRow = null;
       this._renderFlows();
@@ -1274,6 +1281,7 @@ class LightPlannerPanel extends HTMLElement {
           "button",
           {
             class: `flow${flow.id === this._selected ? " sel" : ""}`,
+            "aria-expanded": String(flow.id === this._selected),
             onclick: () => this._select(flow.id),
           },
           h(
@@ -1327,6 +1335,11 @@ class LightPlannerPanel extends HTMLElement {
     this._errorEl = null;
     this._summaryEl = null;
     this._linesEl = null;
+    this._simEls = [];
+    if (this._flows.length) {
+      this._editorEl.replaceChildren();
+      return;
+    }
     this._editorEl.replaceChildren(
       h(
         "div",
