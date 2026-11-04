@@ -2428,11 +2428,11 @@ class LightPlannerPanel extends HTMLElement {
       type: "range",
       class: "sim-slider",
       min: 0,
-      max: DAY - SNAP,
-      step: SNAP,
+      max: DAY - 1,
+      step: 1,
       "aria-label": this._t("at"),
       oninput: (e) => {
-        this._pvTime = toClock(Number(e.target.value) + (this._axis ?? 0) * 60);
+        this._pvTime = toClock(Number(e.target.value));
         this._pvTimeInput.value = this._pvTime;
         this._syncSimulation(true);
         this._requestPreview();
@@ -2481,10 +2481,9 @@ class LightPlannerPanel extends HTMLElement {
 
   _syncSimulation(fromSlider = false) {
     const minutes = toMinutes(this._pvTime);
-    const axis = this._axis ?? 0;
-    const position = this._relative(minutes, axis);
-    if (!fromSlider && this._pvSlider) this._pvSlider.value = position;
-    this._pvSlider?.style.setProperty("--pos", `${(position / DAY) * 100}%`);
+    const position = this._relative(minutes, this._axis ?? 0);
+    if (!fromSlider && this._pvSlider) this._pvSlider.value = minutes;
+    this._pvSlider?.style.setProperty("--pos", `${(minutes / DAY) * 100}%`);
     this._pvDayButtons?.forEach((button, index) => button.setAttribute("aria-pressed", String(index === this._pvDay)));
     for (const line of this._simEls ?? []) {
       line.style.left = `${(position / DAY) * 100}%`;
