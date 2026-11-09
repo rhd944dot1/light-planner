@@ -6,7 +6,7 @@
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rhd944dot1&repository=light-planner&category=integration)
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/v/release/rhd944dot1/light-planner)](https://github.com/rhd944dot1/light-planner/releases)
 [![Validate](https://github.com/rhd944dot1/light-planner/actions/workflows/validate.yml/badge.svg)](https://github.com/rhd944dot1/light-planner/actions/workflows/validate.yml)
 [![Tests](https://github.com/rhd944dot1/light-planner/actions/workflows/tests.yml/badge.svg)](https://github.com/rhd944dot1/light-planner/actions/workflows/tests.yml)
@@ -46,7 +46,7 @@ Home Assistant 2026.10 or newer. Excluding things from a target needs 2026.11, w
 
 ### HACS
 
-1. Select the button above, or add `https://github.com/rhd944dot1/light-planner` in HACS as a custom repository of type *Integration*. From Home Assistant 2026.11, HACS is built in as the Marketplace.
+1. Select the button above, or search for **Light Planner** in HACS. From Home Assistant 2026.11, HACS is built in as the Marketplace.
 2. Download **Light Planner** and restart Home Assistant.
 3. Go to **Settings > Devices & services > Add integration** and add **Light Planner**.
 4. Open **Light Planner** in the sidebar. It's visible to administrators.
