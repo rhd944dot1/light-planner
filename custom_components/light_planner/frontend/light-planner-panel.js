@@ -66,6 +66,9 @@ const I18N = {
     apply_now_title: "Applies what this flow schedules for this moment, whatever its condition says.",
     applied: "Applied",
     delete: "Delete",
+    duplicate: "Duplicate",
+    duplicate_title: "Creates an unsaved copy of this flow, for example for other weekdays.",
+    copy_name: "{name} (copy)",
     delete_confirm: "Really delete?",
     discard: "Discard changes",
     simulation: "Simulation",
@@ -234,6 +237,9 @@ const I18N = {
     apply_now_title: "Setzt, was dieser Flow für diesen Moment vorsieht, egal was seine Bedingung sagt.",
     applied: "Angewendet",
     delete: "Löschen",
+    duplicate: "Duplizieren",
+    duplicate_title: "Legt eine ungespeicherte Kopie dieses Flows an, zum Beispiel für andere Wochentage.",
+    copy_name: "{name} (Kopie)",
     delete_confirm: "Wirklich löschen?",
     discard: "Änderungen verwerfen",
     simulation: "Simulation",
@@ -1016,6 +1022,27 @@ class LightPlannerPanel extends HTMLElement {
     this._requestPreview();
   }
 
+  // The copy stays unsaved until the user has changed what should differ, usually the weekdays.
+  _duplicate() {
+    const source = this._current;
+    if (!source) return;
+    const flow = JSON.parse(JSON.stringify(source));
+    flow.id = randomId();
+    flow.name = this._t("copy_name", { name: source.name });
+    for (const row of flow.rows) {
+      row.id = randomId();
+      for (const bar of row.bars) bar.id = randomId();
+    }
+    this._flows.splice(this._flows.indexOf(source) + 1, 0, flow);
+    this._selected = flow.id;
+    this._selectedBar = null;
+    this._selectedRow = null;
+    this._renderFlows();
+    this._renderEditor();
+    this._revealEditor();
+    this._requestPreview();
+  }
+
   // A second tap on the open flow closes it.
   _select(id) {
     this._selected = id === this._selected ? null : id;
@@ -1384,6 +1411,7 @@ class LightPlannerPanel extends HTMLElement {
       { class: "actions" },
       this._statusEl,
       h("button", { class: "danger", onclick: (e) => this._delete(e.currentTarget) }, this._t("delete")),
+      h("button", { title: this._t("duplicate_title"), onclick: () => this._duplicate() }, this._t("duplicate")),
       h(
         "button",
         { title: this._t("apply_now_title"), onclick: (e) => this._applyNow(e.currentTarget) },
