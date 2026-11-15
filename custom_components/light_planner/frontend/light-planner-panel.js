@@ -1827,7 +1827,8 @@ class LightPlannerPanel extends HTMLElement {
       ...(lines.length ? [axis, ...lines] : [axis, h("p", { class: "muted", style: "padding:8px 2px" }, this._t("no_rows"))])
     );
     this._syncSimulation();
-    if (focused) this._barEls.get(focused)?.main.focus();
+    // Without preventScroll every preview update would pull the page back up to the bar.
+    if (focused) this._barEls.get(focused)?.main.focus({ preventScroll: true });
   }
 
   _buildBar(track, row, bar) {
